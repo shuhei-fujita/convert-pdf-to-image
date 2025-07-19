@@ -112,7 +112,7 @@ echo ""
 # 結果サマリー
 if [[ "$DRY_RUN" == true ]]; then
   echo "📊 [DRY RUN] 実行予定サマリー:"
-  echo "  📄 変換予定: $converted_count件"
+  echo "  📄 変換予定: ${#pdf_files[@]}件"
 else
   echo "📊 実行結果サマリー:"
   echo "  ✅ 成功: $converted_count件"
