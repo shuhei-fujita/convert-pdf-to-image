@@ -26,6 +26,8 @@ while [[ $# -gt 0 ]]; do
       echo "  -o, --output   出力フォルダ（デフォルト: ./output）"
       echo "  --dry-run      実際の変換を行わず、実行予定の内容を表示"
       echo "  -h, --help     このヘルプを表示"
+      echo ""
+      echo "注意: PDFの全ページを変換します"
       exit 0
       ;;
     *)
@@ -77,8 +79,7 @@ fi
 echo "📋 変換対象ファイル (${#pdf_files[@]}件):"
 for pdf in "${pdf_files[@]}"; do
   filename=$(basename "$pdf" .pdf)
-  output="$OUTPUT_DIR/${filename}.png"
-  echo "  📄 $pdf → $output"
+  echo "  📄 $pdf → $OUTPUT_DIR/${filename}_*.png"
 done
 echo ""
 
@@ -88,20 +89,27 @@ failed_count=0
 
 for pdf in "${pdf_files[@]}"; do
   filename=$(basename "$pdf" .pdf)
-  output="$OUTPUT_DIR/${filename}.png"
+  output_pattern="$OUTPUT_DIR/${filename}_%d.png"
 
   if [[ "$DRY_RUN" == true ]]; then
-    echo "🔄 [DRY RUN] 変換予定: $pdf → $output"
-    ((converted_count++))
+    echo "🔄 [DRY RUN] 変換予定: $pdf → $OUTPUT_DIR/${filename}_*.png"
   else
-    echo "🔄 変換中: $pdf → $output"
+    echo "🔄 変換中: $pdf → $OUTPUT_DIR/${filename}_*.png"
 
-    # ImageMagick で PDF → PNG（1ページ目のみ）
-    if magick -density 300 "${pdf}[0]" -resize 2000x "$output"; then
-      echo "✅ 完了: $output"
+    # ImageMagick で PDF → PNG（全ページ）
+    # エラー出力をキャプチャ
+    error_output=$(magick -density 300 "$pdf" -resize 2000x "$output_pattern" 2>&1)
+    exit_code=$?
+
+    if [[ $exit_code -eq 0 ]]; then
+      # 生成されたファイル数をカウント
+      generated_files=$(find "$OUTPUT_DIR" -name "${filename}_*.png" | wc -l)
+      echo "✅ 完了: $OUTPUT_DIR/${filename}_*.png ($generated_filesページ)"
       ((converted_count++))
     else
       echo "❌ 変換失敗: $pdf"
+      echo "   エラーコード: $exit_code"
+      echo "   エラーメッセージ: $error_output"
       ((failed_count++))
     fi
   fi
